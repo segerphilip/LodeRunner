@@ -6,7 +6,6 @@
 # Version without baddies running around
 #
 
-
 from graphics import *
 
 LEVEL_WIDTH = 35
@@ -15,7 +14,6 @@ LEVEL_HEIGHT = 20
 CELL_SIZE = 24
 WINDOW_WIDTH = CELL_SIZE*LEVEL_WIDTH
 WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
-
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -43,13 +41,21 @@ class Character (object):
 
     def move (self,dx,dy):
         tx = self._x + dx
-        ty = self._y + dy
+        ty = self._y + dy     
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
-            if self._level[index(tx,ty)] == 0:
-                self._x = tx
-                self._y = ty
-                self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
-                
+            if dy == -1 and self._level[index(tx,ty)] == 3:
+                pass
+            else:
+                if self._level[index(tx,ty)] != 1:
+                    self._x = tx
+                    self._y = ty
+                    self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
+                    if self._level[index(tx,ty)] == 0 and self._level[index(tx,ty+1)] != 1:
+                        if self._level[index(tx,ty+1)] != 2:
+                            self.move(0,1)
+                    if self._level[index(tx,ty)] == 4:
+                        pass
+# TODO: implement gold delete
 
 class Player (Character):
     def __init__ (self,x,y,window,level):
@@ -58,12 +64,10 @@ class Player (Character):
     def at_exit (self):
         return (self._y == 0)
 
-
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player):
         Character.__init__(self,'red.gif',x,y,window,level)
         self._player = player
-
 
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
@@ -81,20 +85,17 @@ def won (window):
     window.getKey()
     exit(0)
 
-
-
 # 0 empty
 # 1 brick
 # 2 ladder
 # 3 rope
 # 4 gold
 
-
 def create_level (num):
     screen = []
     screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,1,0])
     screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0])
+    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0])
     screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1])
     screen.extend([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,2,1,0,0,0,1,2,0,1])
     screen.extend([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,1,1,1,1])
@@ -135,6 +136,9 @@ class Space (object):
         return False
 
     def is_rope (self):
+        return False
+
+    def remove (self):
         return False
         
 class Brick (Space):
@@ -201,7 +205,6 @@ MOVE = {
     'Down' : (0,1)
 }
 
-
 def main ():
 
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20)
@@ -219,11 +222,11 @@ def main ():
 
     screen = create_screen(level,window)
 
-    p = Player(10,18,window,level)
+    p = Player(17,18,window,level)
 
-    baddie1 = Baddie(5,1,window,level,p)
-    baddie2 = Baddie(10,1,window,level,p)
-    baddie3 = Baddie(15,1,window,level,p)
+    baddie1 = Baddie(18,2,window,level,p)
+    baddie2 = Baddie(18,7,window,level,p)
+    baddie3 = Baddie(23,18,window,level,p)
 
     while not p.at_exit():
         key = window.checkKey()
