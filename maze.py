@@ -9,7 +9,7 @@
 
 from graphics import *
 
-LEVEL_WIDTH = 20
+LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20
 
 CELL_SIZE = 24
@@ -85,6 +85,9 @@ def won (window):
 
 # 0 empty
 # 1 brick
+# 2 ladder
+# 3 rope
+# 4 gold
 
 
 def create_level (num):
@@ -113,7 +116,7 @@ def create_level (num):
 
 class Space (object):
 
-	def __init__ (self,pic,x,y,window,level):
+    def __init__ (self,pic,x,y,window,level):
         (sx,sy) = screen_pos(x,y)
         self._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),pic)
         self._window = window
@@ -123,63 +126,73 @@ class Space (object):
         self._level = level
 
     def is_brick (self):
-    	return False
+        return False
 
     def is_gold (self):
-    	return False
+        return False
 
     def is_ladder (self):
-    	return False
+        return False
 
     def is_rope (self):
-    	return False
-		
+        return False
+        
 class Brick (Space):
 
-	def __init__ (self,pic,x,y,window,level):
-		Space.__init__ (self,pic,x,y,window,level)
+    def __init__ (self,pic,x,y,window,level):
+        Space.__init__ (self,pic,x,y,window,level)
 
-	def is_brick (self):
-		return True
+    def is_brick (self):
+        return True
 
 class Gold (Space):
 
-	def __init__ (self,pic,x,y,window,level):
-		Space.__init__ (self,pic,x,y,window,level)
+    def __init__ (self,pic,x,y,window,level):
+        Space.__init__ (self,pic,x,y,window,level)
 
-	def is_gold (self):
-		return True
+    def is_gold (self):
+        return True
 
 class Ladder (Space):
 
-	def __init__ (self,pic,x,y,window,level):
-		Space.__init__ (self,pic,x,y,window,level)
+    def __init__ (self,pic,x,y,window,level):
+        Space.__init__ (self,pic,x,y,window,level)
 
-	def is_ladder (self):
-		return True
+    def is_ladder (self):
+        return True
 
 class Rope (Space):
 
-	def __init__ (self,pic,x,y,window,level):
-		Space.__init__ (self,pic,x,y,window,level)
+    def __init__ (self,pic,x,y,window,level):
+        Space.__init__ (self,pic,x,y,window,level)
 
-	def is_rope (self):
-		return True
+    def is_rope (self):
+        return True
 
 def create_screen (level,window):
     # use this instead of Rectangle below for nicer screen
     brick = 'brick.gif'
+    ladder = 'ladder.gif'
+    rope = 'rope.gif'
+    gold = 'gold.gif'
+
     def image (sx,sy,what):
         return Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),what)
 
     for (index,cell) in enumerate(level):
         if cell != 0:
             (sx,sy) = screen_pos_index(index)
-            elt = Rectangle(Point(sx+1,sy+1),
-                            Point(sx+CELL_SIZE-1,sy+CELL_SIZE-1))
-            elt.setFill('sienna')
+            # elt = Rectangle(Point(sx+1,sy+1),
+                            # Point(sx+CELL_SIZE-1,sy+CELL_SIZE-1))
+            if cell == 1:
+                elt = image(sx,sy,brick)
+            elif cell == 2:
+                elt = image(sx,sy,ladder)
+            elif cell == 3:
+                elt = image(sx,sy,rope)
+            elif cell == 4:
+                elt = image(sx,sy,gold)
             elt.draw(window)
-
 
 MOVE = {
     'Left': (-1,0),
