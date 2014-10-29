@@ -15,6 +15,9 @@ CELL_SIZE = 24
 WINDOW_WIDTH = CELL_SIZE*LEVEL_WIDTH
 WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
+OBJS = {}
+GOLD = 0
+
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
 
@@ -25,6 +28,17 @@ def screen_pos_index (index):
 
 def index (x,y):
     return x + (y*LEVEL_WIDTH)
+
+def win (level,window):
+    for i in range(1,19):
+# TODO: Index out of range error for final gold
+        spot = i * 34
+        if level[index(i,spot)] == 0:
+            elt = Image(Point(i+CELL_SIZE/2,spot+CELL_SIZE/2),'ladder.gif')
+            elt.draw(window)
+            OBJS[i,spot] = elt
+        else:
+            break
 
 class Character (object):
     def __init__ (self,pic,x,y,window,level):
@@ -40,22 +54,41 @@ class Character (object):
         return (self._x == x and self._y == y)
 
     def move (self,dx,dy):
+        global GOLD
         tx = self._x + dx
         ty = self._y + dy     
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
-            if dy == -1 and self._level[index(tx,ty)] == 3:
+            if dy == -1 and self._level[index(tx,ty)] == 3 and self._level[index(tx,ty)] == 1:
                 pass
             else:
                 if self._level[index(tx,ty)] != 1:
                     self._x = tx
                     self._y = ty
                     self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
+                    # logic for ladders and rope and falling
                     if self._level[index(tx,ty)] == 0 and self._level[index(tx,ty+1)] != 1:
                         if self._level[index(tx,ty+1)] != 2:
                             self.move(0,1)
+                    # logic for picking up gold
                     if self._level[index(tx,ty)] == 4:
-                        pass
-# TODO: implement gold delete
+                        GOLD -= 1
+                        if GOLD == 0:
+                            win(self._level, self._window)
+                        self._window.delItem(OBJS[self._x,self._y])
+                        OBJS[self._x,self._y] = 0
+                        self._level[index(tx,ty)] = 0
+                        self._window.redraw()
+
+
+    def dig (self,dx,dy):
+        tx = self._x + dx
+        ty = self._y + dy     
+        if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
+            if self._level[index(tx,ty)] == 1 and self._level[index(tx,ty-1)] == 0:
+                self._window.delItem(OBJS[tx,ty])
+                OBJS[tx,ty] = 0
+                self._level[index(tx,ty)] = 0
+                self._window.redraw()
 
 class Player (Character):
     def __init__ (self,x,y,window,level):
@@ -115,66 +148,8 @@ def create_level (num):
     screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
     return screen
 
-class Space (object):
-
-    def __init__ (self,pic,x,y,window,level):
-        (sx,sy) = screen_pos(x,y)
-        self._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),pic)
-        self._window = window
-        self._img.draw(window)
-        self._x = x
-        self._y = y
-        self._level = level
-
-    def is_brick (self):
-        return False
-
-    def is_gold (self):
-        return False
-
-    def is_ladder (self):
-        return False
-
-    def is_rope (self):
-        return False
-
-    def remove (self):
-        return False
-        
-class Brick (Space):
-
-    def __init__ (self,pic,x,y,window,level):
-        Space.__init__ (self,pic,x,y,window,level)
-
-    def is_brick (self):
-        return True
-
-class Gold (Space):
-
-    def __init__ (self,pic,x,y,window,level):
-        Space.__init__ (self,pic,x,y,window,level)
-
-    def is_gold (self):
-        return True
-
-class Ladder (Space):
-
-    def __init__ (self,pic,x,y,window,level):
-        Space.__init__ (self,pic,x,y,window,level)
-
-    def is_ladder (self):
-        return True
-
-class Rope (Space):
-
-    def __init__ (self,pic,x,y,window,level):
-        Space.__init__ (self,pic,x,y,window,level)
-
-    def is_rope (self):
-        return True
-
 def create_screen (level,window):
-    # use this instead of Rectangle below for nicer screen
+    global GOLD
     brick = 'brick.gif'
     ladder = 'ladder.gif'
     rope = 'rope.gif'
@@ -186,8 +161,6 @@ def create_screen (level,window):
     for (index,cell) in enumerate(level):
         if cell != 0:
             (sx,sy) = screen_pos_index(index)
-            # elt = Rectangle(Point(sx+1,sy+1),
-                            # Point(sx+CELL_SIZE-1,sy+CELL_SIZE-1))
             if cell == 1:
                 elt = image(sx,sy,brick)
             elif cell == 2:
@@ -196,18 +169,28 @@ def create_screen (level,window):
                 elt = image(sx,sy,rope)
             elif cell == 4:
                 elt = image(sx,sy,gold)
+                GOLD += 1
             elt.draw(window)
+            OBJS[sx/24,sy/24] = elt
 
 MOVE = {
     'Left': (-1,0),
+    'a' : (-1,0),
     'Right': (1,0),
+    'd' : (1,0),
     'Up' : (0,-1),
-    'Down' : (0,1)
+    'w' : (0,-1),
+    'Down' : (0,1),
+    's' : (0,1)
+}
+
+DIG = {
+    'z' : (-1,1),
+    'x' : (1,1)
 }
 
 def main ():
-
-    window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20)
+    window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20, autoflush=False)
 
     rect = Rectangle(Point(5,5),Point(WINDOW_WIDTH+15,WINDOW_HEIGHT+15))
     rect.setFill('sienna')
@@ -236,7 +219,9 @@ def main ():
         if key in MOVE:
             (dx,dy) = MOVE[key]
             p.move(dx,dy)
-
+        if key in DIG:
+            (dx,dy) = DIG[key]
+            p.dig(dx,dy)
         # baddies should probably move here
 
     won(window)
