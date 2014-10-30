@@ -30,15 +30,15 @@ def index (x,y):
     return x + (y*LEVEL_WIDTH)
 
 def win (level,window):
-    for i in range(1,19):
+    for j in range(20):
 # TODO: Index out of range error for final gold
-        spot = i * 34
-        if level[index(i,spot)] == 0:
-            elt = Image(Point(i+CELL_SIZE/2,spot+CELL_SIZE/2),'ladder.gif')
-            elt.draw(window)
-            OBJS[i,spot] = elt
-        else:
-            break
+        for i in range(35):
+            if level[index(i,j)] == 0:
+                elt = Image(Point(i+CELL_SIZE/2,j+CELL_SIZE/2),'ladder.gif')
+                elt.draw(window)
+                OBJS[i,j] = elt
+            else:
+                break
 
 class Character (object):
     def __init__ (self,pic,x,y,window,level):
