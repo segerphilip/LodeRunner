@@ -29,16 +29,21 @@ def screen_pos_index (index):
 def index (x,y):
     return x + (y*LEVEL_WIDTH)
 
-def win (level,window):
-    for j in range(20):
-# TODO: Index out of range error for final gold
-        for i in range(35):
-            if level[index(i,j)] == 0:
-                elt = Image(Point(i+CELL_SIZE/2,j+CELL_SIZE/2),'ladder.gif')
-                elt.draw(window)
-                OBJS[i,j] = elt
-            else:
-                break
+def win (level,window,p):
+    for i in range(19):
+        if level[index(34,i)] == 0:
+            level[index(34,i)] = 2
+            (sx,sy) = screen_pos_index(index(34,i))
+            elt = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),'ladder.gif')
+            elt.draw(window)
+            OBJS[34,i] = elt
+        else:
+            (sx,sy) = screen_pos(p._x,p._y)
+            p._window.delItem(p._img)
+            p._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),'t_android.gif')
+            p._img.draw(window)
+            p._window.redraw()
+            break
 
 class Character (object):
     def __init__ (self,pic,x,y,window,level):
@@ -56,7 +61,7 @@ class Character (object):
     def move (self,dx,dy):
         global GOLD
         tx = self._x + dx
-        ty = self._y + dy     
+        ty = self._y + dy
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
             if dy == -1 and self._level[index(tx,ty)] == 3 and self._level[index(tx,ty)] == 1:
                 pass
@@ -72,13 +77,10 @@ class Character (object):
                     # logic for picking up gold
                     if self._level[index(tx,ty)] == 4:
                         GOLD -= 1
-                        if GOLD == 0:
-                            win(self._level, self._window)
                         self._window.delItem(OBJS[self._x,self._y])
                         OBJS[self._x,self._y] = 0
                         self._level[index(tx,ty)] = 0
                         self._window.redraw()
-
 
     def dig (self,dx,dy):
         tx = self._x + dx
@@ -92,14 +94,14 @@ class Character (object):
 
 class Player (Character):
     def __init__ (self,x,y,window,level):
-        Character.__init__(self,'android.gif',x,y,window,level)
+        Character.__init__(self,'t_android.gif',x,y,window,level)
 
     def at_exit (self):
         return (self._y == 0)
 
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player):
-        Character.__init__(self,'red.gif',x,y,window,level)
+        Character.__init__(self,'t_red.gif',x,y,window,level)
         self._player = player
 
 def lost (window):
@@ -124,29 +126,16 @@ def won (window):
 # 3 rope
 # 4 gold
 
-def create_level (num):
-    screen = []
-    screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,1,0])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0])
-    screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1])
-    screen.extend([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,2,1,0,0,0,1,2,0,1])
-    screen.extend([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,1,1,1,1])
-    screen.extend([3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,3,3,3,3])
-    screen.extend([2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0])
-    screen.extend([2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1])
-    screen.extend([2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0,2,3,3,3,3,3,3,3,2])
-    screen.extend([2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,2])
-    screen.extend([2,0,0,0,0,0,3,3,0,0,0,0,0,0,3,3,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,2])
-    screen.extend([2,0,1,1,1,1,0,0,1,1,1,1,1,1,0,0,1,2,1,0,0,0,0,3,3,3,2,0,0,1,1,1,1,1,2])
-    screen.extend([2,0,1,0,0,1,0,0,1,0,0,0,0,1,0,0,1,2,1,1,1,1,1,1,0,0,2,0,0,1,0,0,0,1,2])
-    screen.extend([2,0,1,4,4,1,0,0,1,0,4,4,4,1,0,0,1,2,0,4,4,4,0,1,0,0,2,0,0,1,4,4,4,1,2])
-    screen.extend([2,0,1,1,1,1,0,0,1,2,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0,2,0,0,1,1,1,1,1,2])
-    screen.extend([2,0,3,3,3,3,3,3,3,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,3,3,3,3,3,3,3,2])
-    screen.extend([1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1])
-    screen.extend([1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,2,0,0,0,0,0,0,0,1])
-    screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
-    return screen
+def read_level (num):
+    screen = open('level' + num + '.txt')
+    characters = []
+    lines = []
+    count = 0
+    for line in screen:
+        for ch in line:
+            if ch != '\n':
+                lines.append(int(ch))
+    return lines
 
 def create_screen (level,window):
     global GOLD
@@ -190,6 +179,8 @@ DIG = {
 }
 
 def main ():
+    num = raw_input('Which level? ')
+
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20, autoflush=False)
 
     rect = Rectangle(Point(5,5),Point(WINDOW_WIDTH+15,WINDOW_HEIGHT+15))
@@ -201,7 +192,7 @@ def main ():
     rect.setOutline('white')
     rect.draw(window)
 
-    level = create_level(1)
+    level = read_level(num)
 
     screen = create_screen(level,window)
 
@@ -222,6 +213,8 @@ def main ():
         if key in DIG:
             (dx,dy) = DIG[key]
             p.dig(dx,dy)
+        if GOLD == 0:
+            win(p._level,p._window,p)
         # baddies should probably move here
 
     won(window)

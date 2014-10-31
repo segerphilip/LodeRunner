@@ -5,11 +5,8 @@ def read_text (level):
 	count = 0
 	for line in screen:
 		for ch in line:
-			if ch == '\n':
-				lines.append(characters)
-				characters = []
-			else:
-				characters.append(ch)
+			if ch != '\n':
+				lines.append(int(ch))
 	return lines
 
 def main ():
