@@ -7,6 +7,7 @@
 #
 
 from graphics import *
+import time
 
 LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20
@@ -17,6 +18,7 @@ WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
 OBJS = {}
 GOLD = 0
+BADDIE_DELAY = 1
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -104,6 +106,33 @@ class Baddie (Character):
         Character.__init__(self,'t_red.gif',x,y,window,level)
         self._player = player
 
+    def event (self,q):
+        p = self._player
+        if self._x == p._x and self._y == p._y:
+            lost(self._window)
+        if self._x < p._x:
+            self.move(1,0)
+        elif self._x > p._x:
+            self.move(-1,0)
+        else:
+            self.move(1,0)
+        q.enqueue(BADDIE_DELAY,self)
+
+class Queue (object):
+    def __init__ (self):
+        self.queue = []
+
+    def enqueue (self,when,obj):
+        self.queue.append([when,obj])
+
+    def dequeue_if_ready (self):
+        for obj in self.queue:
+            if obj[0] == 0:
+                obj[1].event(self)
+                self.queue.remove(obj)
+            else:
+                obj[0] -= 1
+
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
     t.setSize(36)
@@ -125,16 +154,25 @@ def won (window):
 # 2 ladder
 # 3 rope
 # 4 gold
+# 5 player
+# 6 baddie
+# TODO: implement 7 as exit
 
 def read_level (num):
     screen = open('level' + num + '.txt')
-    characters = []
     lines = []
-    count = 0
+    user = []
+    evil = []
     for line in screen:
         for ch in line:
             if ch != '\n':
-                lines.append(int(ch))
+                ch = int(ch)
+                lines.append(ch)
+                # if ch == 5:
+                    # user.append(enumerate(line))
+                    # print enumerate(line)
+                # elif ch == 6:
+                    # print 'evil'
     return lines
 
 def create_screen (level,window):
@@ -143,6 +181,8 @@ def create_screen (level,window):
     ladder = 'ladder.gif'
     rope = 'rope.gif'
     gold = 'gold.gif'
+    android = 't_android.gif'
+    red = 't_red.gif'
 
     def image (sx,sy,what):
         return Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),what)
@@ -159,6 +199,10 @@ def create_screen (level,window):
             elif cell == 4:
                 elt = image(sx,sy,gold)
                 GOLD += 1
+            elif cell == 5:
+                elt = image(sx,sy,android)
+            elif cell == 6:
+                elt = image(sx,sy,red)
             elt.draw(window)
             OBJS[sx/24,sy/24] = elt
 
@@ -181,6 +225,8 @@ DIG = {
 def main ():
     num = raw_input('Which level? ')
 
+    q = Queue()
+
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20, autoflush=False)
 
     rect = Rectangle(Point(5,5),Point(WINDOW_WIDTH+15,WINDOW_HEIGHT+15))
@@ -202,6 +248,11 @@ def main ():
     baddie2 = Baddie(18,7,window,level,p)
     baddie3 = Baddie(23,18,window,level,p)
 
+    b = [baddie1,baddie2,baddie3]
+
+    for bad in b:
+        q.enqueue(BADDIE_DELAY,bad)
+
     while not p.at_exit():
         key = window.checkKey()
         if key == 'q':
@@ -215,7 +266,8 @@ def main ():
             p.dig(dx,dy)
         if GOLD == 0:
             win(p._level,p._window,p)
-        # baddies should probably move here
+        time.sleep(.1)
+        q.dequeue_if_ready()
 
     won(window)
 
