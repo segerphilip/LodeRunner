@@ -19,6 +19,8 @@ WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 OBJS = {}
 GOLD = 0
 BADDIE_DELAY = 1
+BLOCK_DELAY = 5
+TIME = time.time()
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -49,13 +51,17 @@ def win (level,window,p):
 
 class Character (object):
     def __init__ (self,pic,x,y,window,level):
-        (sx,sy) = screen_pos(x,y)
+        (sx,sy) = x,y
         self._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),pic)
         self._window = window
         self._img.draw(window)
-        self._x = x
-        self._y = y
+        self._x = (x-10)/CELL_SIZE
+        self._y = (y-10)/CELL_SIZE
         self._level = level
+        self._level[index(self._x,self._y)] = 0
+
+    def is_baddie (self):
+        return False
 
     def same_loc (self,x,y):
         return (self._x == x and self._y == y)
@@ -65,6 +71,10 @@ class Character (object):
         tx = self._x + dx
         ty = self._y + dy
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
+            if self._level[index(self._x,self._y)] == 1:
+                if not self.is_baddie():
+                    lost(self._window)
+                return
             if dy == -1 and self._level[index(tx,ty)] == 3 and self._level[index(tx,ty)] == 1:
                 pass
             else:
@@ -73,24 +83,25 @@ class Character (object):
                     self._y = ty
                     self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
                     # logic for ladders and rope and falling
-                    if self._level[index(tx,ty)] == 0 and self._level[index(tx,ty+1)] != 1:
-                        if self._level[index(tx,ty+1)] != 2:
-                            self.move(0,1)
+                    if ty != 19:
+                        if self._level[index(tx,ty)] == 0 and self._level[index(tx,ty+1)] != 1:
+                            if self._level[index(tx,ty+1)] != 2:
+                                self.move(0,1)
                     # logic for picking up gold
-                    if self._level[index(tx,ty)] == 4:
-                        GOLD -= 1
-                        self._window.delItem(OBJS[self._x,self._y])
-                        OBJS[self._x,self._y] = 0
-                        self._level[index(tx,ty)] = 0
-                        self._window.redraw()
+                    if self._level[index(tx,ty)] == 4 and not self.is_baddie():
+                            GOLD -= 1
+                            self._window.delItem(OBJS[self._x,self._y])
+                            OBJS[self._x,self._y] = 0
+                            self._level[index(tx,ty)] = 0
+                            self._window.redraw()
 
-    def dig (self,dx,dy):
+    def dig (self,dx,dy,q):
         tx = self._x + dx
         ty = self._y + dy     
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
             if self._level[index(tx,ty)] == 1 and self._level[index(tx,ty-1)] == 0:
-                self._window.delItem(OBJS[tx,ty])
-                OBJS[tx,ty] = 0
+                q.enqueue(BLOCK_DELAY,OBJS[tx,ty])
+                self._window.delItem(OBJS[tx,ty]._img)
                 self._level[index(tx,ty)] = 0
                 self._window.redraw()
 
@@ -106,17 +117,39 @@ class Baddie (Character):
         Character.__init__(self,'t_red.gif',x,y,window,level)
         self._player = player
 
+    def is_baddie (self):
+        return True
+
     def event (self,q):
         p = self._player
-        if self._x == p._x and self._y == p._y:
-            lost(self._window)
         if self._x < p._x:
             self.move(1,0)
         elif self._x > p._x:
             self.move(-1,0)
+        elif self._y < p._y:
+            self.move(0,1)
+        elif self._y > p._y:
+            self.move(0,-1)
         else:
             self.move(1,0)
         q.enqueue(BADDIE_DELAY,self)
+
+class Brick (object):
+    def __init__ (self,pic,x,y,window,level):
+        (sx,sy) = x,y
+        self._pic = pic
+        self._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),pic)
+        self._window = window
+        self._img.draw(window)
+        self._x = x
+        self._y = y
+        self._level = level
+
+    def event (self,q):
+        self._img = Image(Point(self._x+CELL_SIZE/2,self._y+CELL_SIZE/2+2),self._pic)
+        self._img.draw(self._window)
+        self._window.redraw()
+        self._level[index((self._x-10)/CELL_SIZE,(self._y-10)/CELL_SIZE)] = 1
 
 class Queue (object):
     def __init__ (self):
@@ -126,12 +159,15 @@ class Queue (object):
         self.queue.append([when,obj])
 
     def dequeue_if_ready (self):
-        for obj in self.queue:
-            if obj[0] == 0:
-                obj[1].event(self)
-                self.queue.remove(obj)
-            else:
-                obj[0] -= 1
+        global TIME
+        if time.time() - TIME >= .5:
+            TIME = time.time()
+            for obj in self.queue:
+                if obj[0] == 0:
+                    obj[1].event(self)
+                    self.queue.remove(obj)
+                else:
+                    obj[0] -= 1
 
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
@@ -156,23 +192,15 @@ def won (window):
 # 4 gold
 # 5 player
 # 6 baddie
-# TODO: implement 7 as exit
 
 def read_level (num):
-    screen = open('level' + num + '.txt')
+    screen = open('Levels/level' + str(num) + '.txt')
     lines = []
-    user = []
-    evil = []
     for line in screen:
         for ch in line:
             if ch != '\n':
                 ch = int(ch)
                 lines.append(ch)
-                # if ch == 5:
-                    # user.append(enumerate(line))
-                    # print enumerate(line)
-                # elif ch == 6:
-                    # print 'evil'
     return lines
 
 def create_screen (level,window):
@@ -183,6 +211,7 @@ def create_screen (level,window):
     gold = 'gold.gif'
     android = 't_android.gif'
     red = 't_red.gif'
+    bcords = []
 
     def image (sx,sy,what):
         return Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),what)
@@ -191,7 +220,9 @@ def create_screen (level,window):
         if cell != 0:
             (sx,sy) = screen_pos_index(index)
             if cell == 1:
-                elt = image(sx,sy,brick)
+                brk = Brick(brick,sx,sy,window,level)
+                # elt = image(brk._x,brk._y,brick)
+                OBJS[sx/24,sy/24] = brk
             elif cell == 2:
                 elt = image(sx,sy,ladder)
             elif cell == 3:
@@ -200,11 +231,16 @@ def create_screen (level,window):
                 elt = image(sx,sy,gold)
                 GOLD += 1
             elif cell == 5:
-                elt = image(sx,sy,android)
+                pcords = (sx,sy)
             elif cell == 6:
-                elt = image(sx,sy,red)
-            elt.draw(window)
-            OBJS[sx/24,sy/24] = elt
+                bcords.append((sx,sy))
+                # elt = image(sx,sy,red)
+                # Baddie(18,2,window,level,p)
+            if cell != 1 and cell != 5 and cell != 6:
+                elt.draw(window)
+                OBJS[sx/24,sy/24] = elt
+
+    return pcords,bcords
 
 MOVE = {
     'Left': (-1,0),
@@ -223,9 +259,7 @@ DIG = {
 }
 
 def main ():
-    num = raw_input('Which level? ')
-
-    q = Queue()
+    num = raw_input('Which level?')
 
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20, autoflush=False)
 
@@ -238,17 +272,17 @@ def main ():
     rect.setOutline('white')
     rect.draw(window)
 
+    q = Queue()
+    b= []
+
     level = read_level(num)
 
-    screen = create_screen(level,window)
+    pcords,bcords = create_screen(level,window)
 
-    p = Player(17,18,window,level)
+    p = Player(pcords[0],pcords[1],window,level)
 
-    baddie1 = Baddie(18,2,window,level,p)
-    baddie2 = Baddie(18,7,window,level,p)
-    baddie3 = Baddie(23,18,window,level,p)
-
-    b = [baddie1,baddie2,baddie3]
+    for cord in bcords:
+        b.append(Baddie(cord[0],cord[1],window,level,p))
 
     for bad in b:
         q.enqueue(BADDIE_DELAY,bad)
@@ -263,10 +297,12 @@ def main ():
             p.move(dx,dy)
         if key in DIG:
             (dx,dy) = DIG[key]
-            p.dig(dx,dy)
+            p.dig(dx,dy,q)
         if GOLD == 0:
             win(p._level,p._window,p)
-        time.sleep(.1)
+        for bad in b:
+            if bad._x == p._x and bad._y == p._y:
+                lost(p._window)
         q.dequeue_if_ready()
 
     won(window)
