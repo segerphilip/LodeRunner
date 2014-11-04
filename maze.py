@@ -259,7 +259,7 @@ DIG = {
 }
 
 def main ():
-    num = raw_input('Which level?')
+    num = raw_input('Which level? ')
 
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20, autoflush=False)
 
